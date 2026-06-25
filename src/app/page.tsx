@@ -12,7 +12,7 @@ import { LoginScreen } from "@/components/LoginScreen";
 import { SavedRecordsScreen } from "@/components/SavedRecordsScreen";
 import { StaffingDashboardScreen } from "@/components/StaffingDashboardScreen";
 import { StaffingScreen } from "@/components/StaffingScreen";
-import { getStoredUser, setStoredUser } from "@/lib/storage";
+import { clearStoredUser, getStoredUser, setStoredUser } from "@/lib/storage";
 import type { Usuario } from "@/types";
 
 type Tab = "inicio" | "estacoes" | "ausencia" | "efetivo" | "dashboardEfetivo" | "registros" | "historico" | "dashboard" | "admin";
@@ -40,7 +40,7 @@ export default function Home() {
       user={user}
       onNavigate={setActive}
       onLogout={() => {
-        window.localStorage.clear();
+        clearStoredUser();
         setUser(null);
       }}
     >

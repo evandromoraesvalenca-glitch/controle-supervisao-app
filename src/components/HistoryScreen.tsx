@@ -28,10 +28,10 @@ export function HistoryScreen({ user, refreshKey }: { user: Usuario; refreshKey:
     );
   });
 
-  function reabrir(inspecao: Inspecao) {
+  async function reabrir(inspecao: Inspecao) {
     const next = { ...inspecao, status: "reaberta" as const };
-    saveInspecao(next);
-    fetchInspecoes().then(setInspecoes);
+    await saveInspecao(next);
+    setInspecoes(await fetchInspecoes());
   }
 
   return (

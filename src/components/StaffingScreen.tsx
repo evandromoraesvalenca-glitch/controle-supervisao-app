@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Save, UsersRound } from "lucide-react";
 import { estacoesIniciais } from "@/lib/checklist-data";
-import { fetchLevantamentosEfetivo, getLevantamentosEfetivo, isOnlineStorageEnabled, saveLevantamentoEfetivo, saveLevantamentoEfetivoRemoto } from "@/lib/storage";
+import { fetchLevantamentosEfetivo, saveLevantamentoEfetivo } from "@/lib/storage";
 import type { LevantamentoEfetivo, Usuario } from "@/types";
 
 const supervisores = ["Evandro", "Lucas", "Ana", "Audrey", "Dackson", "A definir"];
@@ -69,14 +69,17 @@ export function StaffingScreen({ user }: { user: Usuario }) {
             criado_em: now,
             atualizado_em: now
           };
-          const status = saveLevantamentoEfetivo(registro);
-          if (isOnlineStorageEnabled) await saveLevantamentoEfetivoRemoto(registro);
-          setRegistros(isOnlineStorageEnabled ? await fetchLevantamentosEfetivo() : getLevantamentosEfetivo());
-          setMessage(status === "updated" ? "Lançamento existente atualizado." : "Lançamento salvo.");
-          event.currentTarget.reset();
-          setLideres(0);
-          setAas(0);
-          setAa(0);
+          try {
+            await saveLevantamentoEfetivo(registro);
+            setRegistros(await fetchLevantamentosEfetivo());
+            setMessage("Lançamento salvo no Supabase.");
+            event.currentTarget.reset();
+            setLideres(0);
+            setAas(0);
+            setAa(0);
+          } catch {
+            setMessage("Não foi possível salvar no Supabase. Confira as variáveis e as políticas RLS.");
+          }
         }}
       >
         <div className="mb-4 flex items-center gap-3">

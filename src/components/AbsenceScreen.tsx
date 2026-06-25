@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Save, UserMinus } from "lucide-react";
-import { isOnlineStorageEnabled, saveAusencia, saveAusenciaRemota } from "@/lib/storage";
+import { saveAusencia } from "@/lib/storage";
 import type { Usuario } from "@/types";
 
 export function AbsenceScreen({ user }: { user: Usuario }) {
@@ -31,10 +31,13 @@ export function AbsenceScreen({ user }: { user: Usuario }) {
             registrado_por: user.nome,
             registrado_em: new Date().toISOString()
           };
-          saveAusencia(ausencia);
-          if (isOnlineStorageEnabled) await saveAusenciaRemota(ausencia);
-          event.currentTarget.reset();
-          setMessage(isOnlineStorageEnabled ? "Registro salvo no Supabase." : "Registro salvo neste navegador.");
+          try {
+            await saveAusencia(ausencia);
+            event.currentTarget.reset();
+            setMessage("Registro salvo no Supabase.");
+          } catch {
+            setMessage("Não foi possível salvar no Supabase. Confira as variáveis e as políticas RLS.");
+          }
         }}
       >
         <label className="block">

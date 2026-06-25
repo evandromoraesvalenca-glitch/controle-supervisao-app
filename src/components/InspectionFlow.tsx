@@ -39,16 +39,16 @@ export function InspectionFlow({ user, onSaved }: { user: Usuario; onSaved: () =
     setStep(nextInspection.status === "rascunho" ? "inicio" : "checklist");
   }
 
-  function updateInspection(next: Inspecao) {
+  async function updateInspection(next: Inspecao) {
     setInspecao(next);
-    saveInspecao(next);
+    await saveInspecao(next);
     onSaved();
   }
 
-  function startChecklist() {
+  async function startChecklist() {
     if (!inspecao) return;
     const next = { ...inspecao, status: "em_andamento" as const };
-    updateInspection(next);
+    await updateInspection(next);
     setStep("checklist");
   }
 
@@ -66,7 +66,7 @@ export function InspectionFlow({ user, onSaved }: { user: Usuario; onSaved: () =
       respondido_por: user.id,
       respondido_em: new Date().toISOString()
     };
-    updateInspection({
+    void updateInspection({
       ...inspecao,
       respostas: {
         ...inspecao.respostas,
@@ -82,9 +82,9 @@ export function InspectionFlow({ user, onSaved }: { user: Usuario; onSaved: () =
     setResposta(item, { fotos: [...current, ...names] });
   }
 
-  function finalizar() {
+  async function finalizar() {
     if (!inspecao) return;
-    updateInspection({ ...inspecao, status: "finalizada", horario_fim: nowTime() });
+    await updateInspection({ ...inspecao, status: "finalizada", horario_fim: nowTime() });
   }
 
   if (step === "estacoes") {

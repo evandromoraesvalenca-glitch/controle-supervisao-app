@@ -2,10 +2,7 @@
 import { supabase } from "@/lib/supabase";
 import type { Ausencia, Inspecao, LevantamentoEfetivo, Resposta, Usuario } from "@/types";
 
-const INSPECOES_KEY = "linha6_inspecoes";
 const USER_KEY = "linha6_usuario_demo";
-const AUSENCIAS_KEY = "linha6_ausencias";
-const EFETIVO_KEY = "linha6_levantamentos_efetivo";
 
 export const demoUser: Usuario = {
   id: "demo-supervisor",
@@ -16,62 +13,90 @@ export const demoUser: Usuario = {
   ativo: true
 };
 
-function readLocal<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  const stored = window.localStorage.getItem(key);
-  return stored ? JSON.parse(stored) : fallback;
+function readUser(): Usuario {
+  if (typeof window === "undefined") return demoUser;
+  const stored = window.localStorage.getItem(USER_KEY);
+  return stored ? JSON.parse(stored) : demoUser;
 }
 
-function writeLocal<T>(key: string, value: T) {
+function writeUser(user: Usuario) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(value));
+  window.localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
-export const isOnlineStorageEnabled = Boolean(supabase);
+export const isOnlineStorageEnabled = true;
 
 export function getStoredUser(): Usuario {
-  return readLocal(USER_KEY, demoUser);
+  return readUser();
 }
 
 export function setStoredUser(user: Usuario) {
-  writeLocal(USER_KEY, user);
+  writeUser(user);
 }
 
-export function getInspecoes(): Inspecao[] {
-  return readLocal<Inspecao[]>(INSPECOES_KEY, []);
+export function clearStoredUser() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(USER_KEY);
+}
+
+function requireSupabase() {
+  if (!supabase) throw new Error("Supabase não configurado.");
+  return supabase;
+}
+
+export async function carregarRegistros<T>(tabela: string): Promise<T[]> {
+  const client = requireSupabase();
+  const { data, error } = await client.from(tabela).select("*");
+  if (error) throw error;
+  return (data || []) as T[];
+}
+
+export async function salvarNovoRegistro<T extends Record<string, unknown>>(tabela: string, registro: T) {
+  const client = requireSupabase();
+  const { data, error } = await client.from(tabela).insert(registro).select().single();
+  if (error) throw error;
+  return data as T;
+}
+
+export async function editarRegistro<T extends Record<string, unknown>>(tabela: string, id: string, registro: Partial<T>) {
+  const client = requireSupabase();
+  const { data, error } = await client.from(tabela).update(registro as Record<string, unknown>).eq("id", id).select().single();
+  if (error) throw error;
+  return data as T;
+}
+
+export async function excluirRegistro(tabela: string, id: string) {
+  const client = requireSupabase();
+  const { error } = await client.from(tabela).delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function getInspecoes(): Promise<Inspecao[]> {
+  return fetchInspecoes();
 }
 
 export async function fetchInspecoes(): Promise<Inspecao[]> {
-  if (!supabase) return getInspecoes();
-  const { data, error } = await supabase
+  const client = requireSupabase();
+  const { data, error } = await client
     .from("app_inspecoes")
     .select("payload")
     .order("atualizado_em", { ascending: false });
 
-  if (!error) {
-    const inspecoes = (data || []).map((row) => row.payload as unknown as Inspecao);
-    writeLocal(INSPECOES_KEY, inspecoes);
-    return inspecoes;
-  }
+  if (!error) return (data || []).map((row) => row.payload as unknown as Inspecao);
 
   const relational = await fetchInspecoesRelacionais();
   if (relational) return relational;
 
-  console.warn("Falha ao buscar checklists no Supabase", error.message);
-  return getInspecoes();
+  throw error;
 }
 
-export function saveInspecao(inspecao: Inspecao) {
-  const inspecoes = getInspecoes();
-  const index = inspecoes.findIndex((item) => item.id === inspecao.id);
-  const next = index >= 0 ? inspecoes.map((item) => (item.id === inspecao.id ? inspecao : item)) : [inspecao, ...inspecoes];
-  writeLocal(INSPECOES_KEY, next);
-  void saveInspecaoRemota(inspecao);
+export async function saveInspecao(inspecao: Inspecao) {
+  return saveInspecaoRemota(inspecao);
 }
 
 export async function saveInspecaoRemota(inspecao: Inspecao) {
-  if (!supabase) return;
-  const { error } = await supabase
+  const client = requireSupabase();
+  const { error } = await client
     .from("app_inspecoes")
     .upsert(
       {
@@ -88,19 +113,27 @@ export async function saveInspecaoRemota(inspecao: Inspecao) {
   if (!error) return;
 
   const savedRelational = await saveInspecaoRelacional(inspecao);
-  if (!savedRelational) console.warn("Falha ao salvar checklist no Supabase", error.message);
+  if (!savedRelational) throw error;
+}
+
+export async function updateInspecao(inspecao: Inspecao) {
+  return saveInspecaoRemota(inspecao);
+}
+
+export async function deleteInspecao(id: string) {
+  return excluirRegistro("app_inspecoes", id);
 }
 
 async function fetchInspecoesRelacionais(): Promise<Inspecao[] | null> {
-  if (!supabase) return null;
-  const { data, error } = await supabase
+  const client = requireSupabase();
+  const { data, error } = await client
     .from("inspecoes")
     .select("id,estacao_id,data,horario_inicio,horario_fim,turno,status,responsavel_nome,responsavel_re,estacoes(nome),inspecao_respostas(status,observacao,foto_url,foto_urls,respondido_em,checklist_itens(codigo,categoria))")
     .order("data", { ascending: false });
 
   if (error) return null;
 
-  const inspecoes = (data || []).map((row: any) => {
+  return (data || []).map((row: any) => {
     const stationName = row.estacoes?.nome || row.estacao_id;
     const station = estacoesIniciais.find((item) => item.nome === stationName);
     const stationId = station?.id || String(row.estacao_id);
@@ -134,19 +167,16 @@ async function fetchInspecoesRelacionais(): Promise<Inspecao[] | null> {
       respostas
     } as Inspecao;
   });
-
-  writeLocal(INSPECOES_KEY, inspecoes);
-  return inspecoes;
 }
 
 async function saveInspecaoRelacional(inspecao: Inspecao) {
-  if (!supabase) return false;
+  const client = requireSupabase();
   const stationName = estacoesIniciais.find((item) => item.id === inspecao.estacao_id)?.nome || inspecao.estacao_id;
-  const { data: station } = await supabase.from("estacoes").select("id").eq("nome", stationName).maybeSingle();
-  const { data: usuario } = await supabase.from("usuarios").select("id").order("created_at", { ascending: true }).limit(1).maybeSingle();
+  const { data: station } = await client.from("estacoes").select("id").eq("nome", stationName).maybeSingle();
+  const { data: usuario } = await client.from("usuarios").select("id").order("created_at", { ascending: true }).limit(1).maybeSingle();
   if (!station?.id || !usuario?.id) return false;
 
-  const { error: inspecaoError } = await supabase.from("inspecoes").upsert(
+  const { error: inspecaoError } = await client.from("inspecoes").upsert(
     {
       id: inspecao.id,
       estacao_id: station.id,
@@ -163,12 +193,12 @@ async function saveInspecaoRelacional(inspecao: Inspecao) {
   );
   if (inspecaoError) return false;
 
-  await supabase.from("inspecao_respostas").delete().eq("inspecao_id", inspecao.id);
+  await client.from("inspecao_respostas").delete().eq("inspecao_id", inspecao.id);
   const itens = getChecklistItensPorEstacao(inspecao.estacao_id);
   const respostas = Object.values(inspecao.respostas).filter((resposta) => resposta.status);
   if (respostas.length === 0) return true;
 
-  const { data: remoteItems } = await supabase.from("checklist_itens").select("id,codigo,categoria");
+  const { data: remoteItems } = await client.from("checklist_itens").select("id,codigo,categoria");
   const rows = respostas.flatMap((resposta) => {
     const item = itens.find((checkItem) => checkItem.id === resposta.checklist_item_id);
     const remoteItem = remoteItems?.find((remote) => remote.codigo === item?.codigo && remote.categoria === item?.categoria);
@@ -186,42 +216,37 @@ async function saveInspecaoRelacional(inspecao: Inspecao) {
   });
 
   if (rows.length === 0) return true;
-  const { error } = await supabase.from("inspecao_respostas").insert(rows);
+  const { error } = await client.from("inspecao_respostas").insert(rows);
   return !error;
 }
 
-export function getInspecao(id: string) {
-  return getInspecoes().find((inspecao) => inspecao.id === id);
+export async function getInspecao(id: string) {
+  const inspecoes = await fetchInspecoes();
+  return inspecoes.find((inspecao) => inspecao.id === id);
 }
 
-export function getAusencias(): Ausencia[] {
-  return readLocal<Ausencia[]>(AUSENCIAS_KEY, []);
+export async function getAusencias(): Promise<Ausencia[]> {
+  return fetchAusencias();
 }
 
 export async function fetchAusencias(): Promise<Ausencia[]> {
-  if (!supabase) return getAusencias();
-  const { data, error } = await supabase
+  const client = requireSupabase();
+  const { data, error } = await client
     .from("ausencias")
     .select("id,colaborador,tipo,registrado_por,registrado_em")
     .order("registrado_em", { ascending: false });
 
-  if (error) {
-    console.warn("Falha ao buscar ausências no Supabase", error.message);
-    return getAusencias();
-  }
-
-  const ausencias = (data || []) as Ausencia[];
-  writeLocal(AUSENCIAS_KEY, ausencias);
-  return ausencias;
+  if (error) throw error;
+  return (data || []) as Ausencia[];
 }
 
-export function saveAusencia(ausencia: Ausencia) {
-  writeLocal(AUSENCIAS_KEY, [ausencia, ...getAusencias()]);
+export async function saveAusencia(ausencia: Ausencia) {
+  return saveAusenciaRemota(ausencia);
 }
 
 export async function saveAusenciaRemota(ausencia: Ausencia) {
-  if (!supabase) return;
-  const { error } = await supabase.from("ausencias").insert({
+  const client = requireSupabase();
+  const { error } = await client.from("ausencias").insert({
     id: ausencia.id,
     colaborador: ausencia.colaborador,
     tipo: ausencia.tipo,
@@ -229,51 +254,45 @@ export async function saveAusenciaRemota(ausencia: Ausencia) {
     registrado_em: ausencia.registrado_em
   });
 
-  if (error) console.warn("Falha ao salvar ausência no Supabase", error.message);
+  if (error) throw error;
 }
 
-export function getLevantamentosEfetivo(): LevantamentoEfetivo[] {
-  return readLocal<LevantamentoEfetivo[]>(EFETIVO_KEY, []);
+export async function updateAusencia(ausencia: Ausencia) {
+  return editarRegistro<Ausencia & Record<string, unknown>>("ausencias", ausencia.id, ausencia);
+}
+
+export async function deleteAusencia(id: string) {
+  return excluirRegistro("ausencias", id);
+}
+
+export async function getLevantamentosEfetivo(): Promise<LevantamentoEfetivo[]> {
+  return fetchLevantamentosEfetivo();
 }
 
 export async function fetchLevantamentosEfetivo(): Promise<LevantamentoEfetivo[]> {
-  if (!supabase) return getLevantamentosEfetivo();
-  const { data, error } = await supabase
+  const client = requireSupabase();
+  const { data, error } = await client
     .from("levantamentos_efetivo")
-    .select("id,data_referencia,hora_preenchimento,estacao,supervisor,lideres,aas,aa,efetivo_total,observacao,criado_em,atualizado_em")
+    .select("id,data_referencia,hora_preenchimento,estacao,supervisor,lideres,aas,aa,efetivo_total,observacao,usuario_id,criado_em,atualizado_em")
     .order("data_referencia", { ascending: false })
     .order("hora_preenchimento", { ascending: false });
 
-  if (error) {
-    console.warn("Falha ao buscar efetivo no Supabase", error.message);
-    return getLevantamentosEfetivo();
-  }
+  if (error) throw error;
 
-  const registros = (data || []).map((item) => ({
+  return (data || []).map((item) => ({
     ...item,
     observacao: item.observacao || "",
-    usuario_id: "supabase"
+    usuario_id: item.usuario_id || "supabase"
   })) as LevantamentoEfetivo[];
-  writeLocal(EFETIVO_KEY, registros);
-  return registros;
 }
 
-export function saveLevantamentoEfetivo(registro: LevantamentoEfetivo) {
-  const registros = getLevantamentosEfetivo();
-  const index = registros.findIndex(
-    (item) =>
-      item.data_referencia === registro.data_referencia &&
-      item.estacao === registro.estacao &&
-      item.supervisor === registro.supervisor
-  );
-  const next = index >= 0 ? registros.map((item, itemIndex) => (itemIndex === index ? { ...registro, id: item.id, criado_em: item.criado_em } : item)) : [registro, ...registros];
-  writeLocal(EFETIVO_KEY, next);
-  return index >= 0 ? "updated" : "created";
+export async function saveLevantamentoEfetivo(registro: LevantamentoEfetivo) {
+  return saveLevantamentoEfetivoRemoto(registro);
 }
 
 export async function saveLevantamentoEfetivoRemoto(registro: LevantamentoEfetivo) {
-  if (!supabase) return "local" as const;
-  const { error } = await supabase
+  const client = requireSupabase();
+  const { error } = await client
     .from("levantamentos_efetivo")
     .upsert(
       {
@@ -287,17 +306,21 @@ export async function saveLevantamentoEfetivoRemoto(registro: LevantamentoEfetiv
         aa: registro.aa,
         efetivo_total: registro.efetivo_total,
         observacao: registro.observacao,
-        usuario_nome: registro.usuario_id,
+        usuario_id: registro.usuario_id,
         criado_em: registro.criado_em,
         atualizado_em: new Date().toISOString()
       },
       { onConflict: "data_referencia,estacao,supervisor" }
     );
 
-  if (error) {
-    console.warn("Falha ao salvar efetivo no Supabase", error.message);
-    return "local" as const;
-  }
-
+  if (error) throw error;
   return "remote" as const;
+}
+
+export async function updateLevantamentoEfetivo(registro: LevantamentoEfetivo) {
+  return saveLevantamentoEfetivoRemoto(registro);
+}
+
+export async function deleteLevantamentoEfetivo(id: string) {
+  return excluirRegistro("levantamentos_efetivo", id);
 }
