@@ -85,7 +85,6 @@ export function StaffingScreen({ user }: { user: Usuario }) {
             await saveLevantamentoEfetivo(registro);
             setRegistros(await fetchLevantamentosEfetivo());
             setMessage("Lançamento salvo no Supabase.");
-            event.currentTarget.reset();
             setLideres(0);
             setAas(0);
             setAa(0);
