@@ -59,7 +59,6 @@ export function StaffingScreen({ user }: { user: Usuario }) {
         className="rounded-lg bg-white p-5 shadow-panel"
         onSubmit={async (event) => {
           event.preventDefault();
-          const formElement = event.currentTarget;
           const form = new FormData(event.currentTarget);
           const supervisor = String(form.get("supervisor") || "");
           if (/marcia|márcia/i.test(supervisor)) {
@@ -86,7 +85,6 @@ export function StaffingScreen({ user }: { user: Usuario }) {
             await saveLevantamentoEfetivo(registro);
             setRegistros(await fetchLevantamentosEfetivo());
             setMessage("Lançamento salvo no Supabase.");
-            formElement.reset();
             setLideres(0);
             setAas(0);
             setAa(0);

@@ -35,7 +35,6 @@ export function AbsenceScreen({ user }: { user: Usuario }) {
         className="grid gap-4"
         onSubmit={async (event) => {
           event.preventDefault();
-          const formElement = event.currentTarget;
           const form = new FormData(event.currentTarget);
           const ausencia = {
             id: crypto.randomUUID(),
@@ -46,7 +45,6 @@ export function AbsenceScreen({ user }: { user: Usuario }) {
           };
           try {
             await saveAusencia(ausencia);
-            formElement.reset();
             setMessage("Registro salvo no Supabase.");
           } catch (error) {
             setMessage(`Não foi possível salvar no Supabase: ${getErrorMessage(error)}`);
