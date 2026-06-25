@@ -6,7 +6,7 @@ import { estacoesIniciais } from "@/lib/checklist-data";
 import { fetchLevantamentosEfetivo, saveLevantamentoEfetivo } from "@/lib/storage";
 import type { LevantamentoEfetivo, Usuario } from "@/types";
 
-const supervisores = ["Evandro", "Lucas", "Ana", "Audrey", "Dackson", "A definir"];
+const supervisores = ["Evandro", "Lucas", "Ana", "Audrey", "Dackson", "Junior", "A definir"];
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -84,7 +84,7 @@ export function StaffingScreen({ user }: { user: Usuario }) {
           try {
             await saveLevantamentoEfetivo(registro);
             setRegistros(await fetchLevantamentosEfetivo());
-            setMessage("Lançamento salvo no Supabase.");
+            setMessage("Registro salvo.");
             setLideres(0);
             setAas(0);
             setAa(0);
