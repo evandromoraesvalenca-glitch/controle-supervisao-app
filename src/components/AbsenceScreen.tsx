@@ -45,7 +45,6 @@ export function AbsenceScreen({ user }: { user: Usuario }) {
           };
           try {
             await saveAusencia(ausencia);
-            event.currentTarget.reset();
             setMessage("Registro salvo no Supabase.");
           } catch (error) {
             setMessage(`Não foi possível salvar no Supabase: ${getErrorMessage(error)}`);
