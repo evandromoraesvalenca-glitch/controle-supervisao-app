@@ -8,6 +8,18 @@ import type { LevantamentoEfetivo, Usuario } from "@/types";
 
 const supervisores = ["Evandro", "Lucas", "Ana", "Audrey", "Dackson", "A definir"];
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    return [record.message, record.details, record.hint, record.code]
+      .filter(Boolean)
+      .map(String)
+      .join(" | ") || JSON.stringify(record);
+  }
+  return String(error || "Erro desconhecido");
+}
+
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -77,8 +89,8 @@ export function StaffingScreen({ user }: { user: Usuario }) {
             setLideres(0);
             setAas(0);
             setAa(0);
-          } catch {
-            setMessage("Não foi possível salvar no Supabase. Confira as variáveis e as políticas RLS.");
+          } catch (error) {
+            setMessage(`Não foi possível salvar no Supabase: ${getErrorMessage(error)}`);
           }
         }}
       >
@@ -178,3 +190,4 @@ function Metric({ label, value, danger }: { label: string; value: number; danger
     </div>
   );
 }
+

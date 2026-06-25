@@ -5,6 +5,18 @@ import { Save, UserMinus } from "lucide-react";
 import { saveAusencia } from "@/lib/storage";
 import type { Usuario } from "@/types";
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    return [record.message, record.details, record.hint, record.code]
+      .filter(Boolean)
+      .map(String)
+      .join(" | ") || JSON.stringify(record);
+  }
+  return String(error || "Erro desconhecido");
+}
+
 export function AbsenceScreen({ user }: { user: Usuario }) {
   const [message, setMessage] = React.useState("");
 
@@ -35,8 +47,8 @@ export function AbsenceScreen({ user }: { user: Usuario }) {
             await saveAusencia(ausencia);
             event.currentTarget.reset();
             setMessage("Registro salvo no Supabase.");
-          } catch {
-            setMessage("Não foi possível salvar no Supabase. Confira as variáveis e as políticas RLS.");
+          } catch (error) {
+            setMessage(`Não foi possível salvar no Supabase: ${getErrorMessage(error)}`);
           }
         }}
       >
@@ -60,3 +72,4 @@ export function AbsenceScreen({ user }: { user: Usuario }) {
     </section>
   );
 }
+

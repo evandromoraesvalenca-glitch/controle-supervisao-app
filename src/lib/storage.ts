@@ -292,26 +292,37 @@ export async function saveLevantamentoEfetivo(registro: LevantamentoEfetivo) {
 
 export async function saveLevantamentoEfetivoRemoto(registro: LevantamentoEfetivo) {
   const client = requireSupabase();
-  const { error } = await client
+  const payload = {
+    data_referencia: registro.data_referencia,
+    hora_preenchimento: registro.hora_preenchimento,
+    estacao: registro.estacao,
+    supervisor: registro.supervisor,
+    lideres: registro.lideres,
+    aas: registro.aas,
+    aa: registro.aa,
+    efetivo_total: registro.efetivo_total,
+    observacao: registro.observacao,
+    usuario_id: registro.usuario_id,
+    atualizado_em: new Date().toISOString()
+  };
+
+  const { data: existing, error: selectError } = await client
     .from("levantamentos_efetivo")
-    .upsert(
-      {
-        id: registro.id,
-        data_referencia: registro.data_referencia,
-        hora_preenchimento: registro.hora_preenchimento,
-        estacao: registro.estacao,
-        supervisor: registro.supervisor,
-        lideres: registro.lideres,
-        aas: registro.aas,
-        aa: registro.aa,
-        efetivo_total: registro.efetivo_total,
-        observacao: registro.observacao,
-        usuario_id: registro.usuario_id,
-        criado_em: registro.criado_em,
-        atualizado_em: new Date().toISOString()
-      },
-      { onConflict: "data_referencia,estacao,supervisor" }
-    );
+    .select("id,criado_em")
+    .eq("data_referencia", registro.data_referencia)
+    .eq("estacao", registro.estacao)
+    .eq("supervisor", registro.supervisor)
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (selectError) throw selectError;
+
+  const request = existing?.id
+    ? client.from("levantamentos_efetivo").update(payload).eq("id", existing.id)
+    : client.from("levantamentos_efetivo").insert({ ...payload, id: registro.id, criado_em: registro.criado_em });
+
+  const { error } = await request;
 
   if (error) throw error;
   return "remote" as const;
