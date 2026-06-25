@@ -6,7 +6,7 @@ import { estacoesIniciais } from "@/lib/checklist-data";
 import { fetchLevantamentosEfetivo, saveLevantamentoEfetivo } from "@/lib/storage";
 import type { LevantamentoEfetivo, Usuario } from "@/types";
 
-const supervisores = ["Evandro", "Lucas", "Ana", "Audrey", "Dackson", "A definir"];
+const supervisores = ["Evandro", "Lucas", "Ana", "Audrey", "Dackson", "Junior", "A definir"];
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
