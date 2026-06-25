@@ -9,7 +9,15 @@ import type { LevantamentoEfetivo, Usuario } from "@/types";
 const supervisores = ["Evandro", "Lucas", "Ana", "Audrey", "Dackson", "A definir"];
 
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Erro desconhecido";
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    return [record.message, record.details, record.hint, record.code]
+      .filter(Boolean)
+      .map(String)
+      .join(" | ") || JSON.stringify(record);
+  }
+  return String(error || "Erro desconhecido");
 }
 
 function today() {
@@ -51,6 +59,7 @@ export function StaffingScreen({ user }: { user: Usuario }) {
         className="rounded-lg bg-white p-5 shadow-panel"
         onSubmit={async (event) => {
           event.preventDefault();
+          const formElement = event.currentTarget;
           const form = new FormData(event.currentTarget);
           const supervisor = String(form.get("supervisor") || "");
           if (/marcia|márcia/i.test(supervisor)) {
@@ -77,7 +86,7 @@ export function StaffingScreen({ user }: { user: Usuario }) {
             await saveLevantamentoEfetivo(registro);
             setRegistros(await fetchLevantamentosEfetivo());
             setMessage("Lançamento salvo no Supabase.");
-            event.currentTarget.reset();
+            formElement.reset();
             setLideres(0);
             setAas(0);
             setAa(0);
@@ -182,3 +191,4 @@ function Metric({ label, value, danger }: { label: string; value: number; danger
     </div>
   );
 }
+

@@ -6,7 +6,15 @@ import { saveAusencia } from "@/lib/storage";
 import type { Usuario } from "@/types";
 
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Erro desconhecido";
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    return [record.message, record.details, record.hint, record.code]
+      .filter(Boolean)
+      .map(String)
+      .join(" | ") || JSON.stringify(record);
+  }
+  return String(error || "Erro desconhecido");
 }
 
 export function AbsenceScreen({ user }: { user: Usuario }) {
@@ -27,6 +35,7 @@ export function AbsenceScreen({ user }: { user: Usuario }) {
         className="grid gap-4"
         onSubmit={async (event) => {
           event.preventDefault();
+          const formElement = event.currentTarget;
           const form = new FormData(event.currentTarget);
           const ausencia = {
             id: crypto.randomUUID(),
@@ -37,7 +46,7 @@ export function AbsenceScreen({ user }: { user: Usuario }) {
           };
           try {
             await saveAusencia(ausencia);
-            event.currentTarget.reset();
+            formElement.reset();
             setMessage("Registro salvo no Supabase.");
           } catch (error) {
             setMessage(`Não foi possível salvar no Supabase: ${getErrorMessage(error)}`);
@@ -64,3 +73,4 @@ export function AbsenceScreen({ user }: { user: Usuario }) {
     </section>
   );
 }
+
