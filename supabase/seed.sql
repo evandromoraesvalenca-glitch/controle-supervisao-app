@@ -85,6 +85,10 @@ insert into public.checklist_itens (codigo, categoria, descricao, controle_espec
   ('OPA03','Operação Parcial Assistida','Sinal luminoso para embarque','Verificar limpeza, dano e funcionamento',true,true),
   ('OPA04','Operação Parcial Assistida','Responsável EPC','Confirmar prontidão para a operação do lado da obra',true,true),
   ('OPA05','Operação Parcial Assistida','Ventilação principal','Verificar funcionamento do PCL e alarmes',true,true),
+  ('OP01','Operação Parcial','Monitor de controle de fluxo','Verificar disponibilidade, integridade e funcionamento',true,true),
+  ('OP02','Operação Parcial','Megafones','Verificar disponibilidade, integridade e funcionamento',true,true),
+  ('OP03','Operação Parcial','Bastão luminoso','Verificar disponibilidade, integridade e funcionamento',true,true),
+  ('OP04','Operação Parcial','Botoeiras de sinaleiro','Verificar disponibilidade, integridade e funcionamento',true,true),
   ('DF01','Direcionadores de Fluxo','Direcionadores de fluxos','Verificar posicionamento correto, integridade, segregação adequada dos fluxos, visibilidade para os passageiros e ausência de obstáculos',true,true)
 on conflict (codigo, categoria) do update set
   descricao = excluded.descricao,

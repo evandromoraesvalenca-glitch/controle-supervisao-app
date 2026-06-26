@@ -94,6 +94,10 @@ export const checklistItensIniciais: ChecklistItem[] = [
   item("OPA03", "Operação Parcial Assistida", "Sinal luminoso para embarque", "Verificar limpeza, dano e funcionamento"),
   item("OPA04", "Operação Parcial Assistida", "Responsável EPC", "Confirmar prontidão para a operação do lado da obra"),
   item("OPA05", "Operação Parcial Assistida", "Ventilação principal", "Verificar funcionamento do PCL e alarmes"),
+  item("OP01", "Operação Parcial", "Monitor de controle de fluxo", "Verificar disponibilidade, integridade e funcionamento"),
+  item("OP02", "Operação Parcial", "Megafones", "Verificar disponibilidade, integridade e funcionamento"),
+  item("OP03", "Operação Parcial", "Bastão luminoso", "Verificar disponibilidade, integridade e funcionamento"),
+  item("OP04", "Operação Parcial", "Botoeiras de sinaleiro", "Verificar disponibilidade, integridade e funcionamento"),
   item("DF01", "Direcionadores de Fluxo", "Direcionadores de fluxos", "Verificar posicionamento correto, integridade, segregação adequada dos fluxos, visibilidade para os passageiros e ausência de obstáculos")
 ];
 

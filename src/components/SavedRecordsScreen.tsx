@@ -31,6 +31,7 @@ export function SavedRecordsScreen() {
   const [ausencias, setAusencias] = React.useState<Ausencia[]>([]);
   const [efetivo, setEfetivo] = React.useState<LevantamentoEfetivo[]>([]);
   const [filtro, setFiltro] = React.useState<RegistroFiltro>("todos");
+  const [dataFiltro, setDataFiltro] = React.useState("");
   const [editingEfetivoId, setEditingEfetivoId] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState("");
 
@@ -77,6 +78,10 @@ export function SavedRecordsScreen() {
     setMessage("Lançamento de efetivo excluído.");
   }
 
+  const inspecoesFiltradas = dataFiltro ? inspecoes.filter((inspecao) => inspecao.data === dataFiltro) : inspecoes;
+  const efetivoFiltrado = dataFiltro ? efetivo.filter((registro) => registro.data_referencia === dataFiltro) : efetivo;
+  const ausenciasFiltradas = dataFiltro ? ausencias.filter((ausencia) => ausencia.registrado_em.slice(0, 10) === dataFiltro) : ausencias;
+
   return (
     <section className="space-y-5">
       <div>
@@ -101,6 +106,25 @@ export function SavedRecordsScreen() {
             );
           })}
         </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+          <label className="block">
+            <span className="mb-1 block px-1 text-xs font-black uppercase tracking-wide text-slate-500">Filtrar por data</span>
+            <input
+              type="date"
+              value={dataFiltro}
+              onChange={(event) => setDataFiltro(event.target.value)}
+              className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-linha-blue"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => setDataFiltro("")}
+            className="h-11 rounded-lg bg-slate-100 px-4 text-sm font-bold text-linha-blue ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!dataFiltro}
+          >
+            Limpar data
+          </button>
+        </div>
       </section>
 
       {message && <p className="rounded-lg bg-green-50 p-3 text-sm font-bold text-green-800">{message}</p>}
@@ -111,8 +135,8 @@ export function SavedRecordsScreen() {
           <h3 className="text-lg font-bold text-linha-blue">Distribuição de efetivo</h3>
         </div>
         <div className="space-y-3">
-          {efetivo.length === 0 && <p className="font-semibold text-slate-500">Nenhum lançamento de efetivo salvo.</p>}
-          {efetivo.map((registro) => (
+          {efetivoFiltrado.length === 0 && <p className="font-semibold text-slate-500">Nenhum lançamento de efetivo encontrado.</p>}
+          {efetivoFiltrado.map((registro) => (
             <article key={registro.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               {editingEfetivoId === registro.id ? (
                 <form className="grid gap-3" onSubmit={(event) => salvarEdicaoEfetivo(event, registro)}>
@@ -180,8 +204,8 @@ export function SavedRecordsScreen() {
           <h3 className="text-lg font-bold text-linha-blue">Checklists</h3>
         </div>
         <div className="space-y-3">
-          {inspecoes.length === 0 && <p className="font-semibold text-slate-500">Nenhum checklist salvo.</p>}
-          {inspecoes.map((inspecao) => {
+          {inspecoesFiltradas.length === 0 && <p className="font-semibold text-slate-500">Nenhum checklist encontrado.</p>}
+          {inspecoesFiltradas.map((inspecao) => {
             const station = estacoesIniciais.find((item) => item.id === inspecao.estacao_id)?.nome || inspecao.estacao_id;
             const stats = summarize(inspecao, getChecklistItensPorEstacao(inspecao.estacao_id));
             return (
@@ -211,8 +235,8 @@ export function SavedRecordsScreen() {
           <h3 className="text-lg font-bold text-linha-blue">Ausências</h3>
         </div>
         <div className="space-y-3">
-          {ausencias.length === 0 && <p className="font-semibold text-slate-500">Nenhuma ausência registrada.</p>}
-          {ausencias.map((ausencia) => (
+          {ausenciasFiltradas.length === 0 && <p className="font-semibold text-slate-500">Nenhuma ausência encontrada.</p>}
+          {ausenciasFiltradas.map((ausencia) => (
             <article key={ausencia.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p className="font-bold text-linha-blue">{ausencia.colaborador}</p>
               <p className="text-sm text-slate-600">
