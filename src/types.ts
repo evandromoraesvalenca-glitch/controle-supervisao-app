@@ -54,7 +54,7 @@ export type Inspecao = {
 export type Ausencia = {
   id: string;
   colaborador: string;
-  tipo: "falta" | "banco-de-horas";
+  tipo: "falta" | "banco-de-horas" | "atestado" | "home-office";
   registrado_por: string;
   registrado_em: string;
 };

@@ -329,7 +329,26 @@ export async function saveLevantamentoEfetivoRemoto(registro: LevantamentoEfetiv
 }
 
 export async function updateLevantamentoEfetivo(registro: LevantamentoEfetivo) {
-  return saveLevantamentoEfetivoRemoto(registro);
+  const client = requireSupabase();
+  const { error } = await client
+    .from("levantamentos_efetivo")
+    .update({
+      data_referencia: registro.data_referencia,
+      hora_preenchimento: registro.hora_preenchimento,
+      estacao: registro.estacao,
+      supervisor: registro.supervisor,
+      lideres: registro.lideres,
+      aas: registro.aas,
+      aa: registro.aa,
+      efetivo_total: registro.efetivo_total,
+      observacao: registro.observacao,
+      usuario_id: registro.usuario_id,
+      atualizado_em: new Date().toISOString()
+    })
+    .eq("id", registro.id);
+
+  if (error) throw error;
+  return "remote" as const;
 }
 
 export async function deleteLevantamentoEfetivo(id: string) {

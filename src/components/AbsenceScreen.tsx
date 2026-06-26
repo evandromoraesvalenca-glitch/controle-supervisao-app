@@ -3,7 +3,14 @@
 import * as React from "react";
 import { Save, UserMinus } from "lucide-react";
 import { saveAusencia } from "@/lib/storage";
-import type { Usuario } from "@/types";
+import type { Ausencia, Usuario } from "@/types";
+
+const tiposAusencia: Array<{ value: Ausencia["tipo"]; label: string }> = [
+  { value: "falta", label: "Falta" },
+  { value: "banco-de-horas", label: "Banco de horas" },
+  { value: "atestado", label: "Atestado" },
+  { value: "home-office", label: "Home office" }
+];
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -39,13 +46,13 @@ export function AbsenceScreen({ user }: { user: Usuario }) {
           const ausencia = {
             id: crypto.randomUUID(),
             colaborador: String(form.get("colaborador") || ""),
-            tipo: form.get("tipo") as "falta" | "banco-de-horas",
+            tipo: form.get("tipo") as Ausencia["tipo"],
             registrado_por: user.nome,
             registrado_em: new Date().toISOString()
           };
           try {
             await saveAusencia(ausencia);
-            setMessage("Registro salvo no Supabase.");
+            setMessage("Registro salvo.");
           } catch (error) {
             setMessage(`Não foi possível salvar no Supabase: ${getErrorMessage(error)}`);
           }
@@ -58,8 +65,9 @@ export function AbsenceScreen({ user }: { user: Usuario }) {
         <label className="block">
           <span className="text-sm font-semibold text-slate-700">Tipo de registro</span>
           <select name="tipo" required className="mt-1 h-12 w-full rounded-lg border border-slate-300 px-3">
-            <option value="falta">Falta</option>
-            <option value="banco-de-horas">Banco de horas</option>
+            {tiposAusencia.map((tipo) => (
+              <option key={tipo.value} value={tipo.value}>{tipo.label}</option>
+            ))}
           </select>
         </label>
         <button className="flex h-14 items-center justify-center gap-2 rounded-lg bg-linha-orange text-lg font-bold text-white">

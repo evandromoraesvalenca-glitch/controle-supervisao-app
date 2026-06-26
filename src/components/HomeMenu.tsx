@@ -14,7 +14,7 @@ export function HomeMenu({ user, onOpen }: { user: Usuario; onOpen: (action: Hom
       </div>
       <div className="grid gap-3">
         <MenuButton title="Checklist" description="Escolher estação e iniciar checklist de pré-abertura." icon={ClipboardCheck} onClick={() => onOpen("estacoes")} />
-        <MenuButton title="Registrar ausência" description="Informar falta ou banco de horas de colaborador." icon={UserMinus} onClick={() => onOpen("ausencia")} />
+        <MenuButton title="Registrar ausência" description="Informar falta, banco de horas, atestado ou home office." icon={UserMinus} onClick={() => onOpen("ausencia")} />
         <MenuButton title="Distribuição" description="Lançar o efetivo diário por estação." icon={UsersRound} onClick={() => onOpen("efetivo")} />
         <MenuButton title="Dashboard Efetivo" description="Seguir para a visualização geral do efetivo lançado." icon={LayoutDashboard} onClick={() => onOpen("dashboardEfetivo")} />
         <MenuButton title="Registros salvos" description="Visualizar checklists e ausências salvas." icon={FolderOpen} onClick={() => onOpen("registros")} />

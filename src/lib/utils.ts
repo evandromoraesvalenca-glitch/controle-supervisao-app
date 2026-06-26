@@ -29,8 +29,7 @@ export function summarize(inspecao: Inspecao, itens: ChecklistItem[]) {
   const pendentes = aplicaveis.filter((item) => !inspecao.respostas[item.id]?.status);
   const invalidos = aplicaveis.filter((item) => {
     const resposta = inspecao.respostas[item.id];
-    const exigeFoto = inspecao.turno !== "Operação Parcial";
-    return resposta?.status === "NOK" && (!resposta.observacao.trim() || (exigeFoto && resposta.fotos.length === 0));
+    return resposta?.status === "NOK" && !resposta.observacao.trim();
   });
 
   return {

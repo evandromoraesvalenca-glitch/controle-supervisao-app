@@ -3,6 +3,7 @@
 import * as React from "react";
 import { AlertTriangle, ArrowLeft, Camera, Check, ChevronRight, Lock, Save, X } from "lucide-react";
 import { categorias, estacoesIniciais, getChecklistItensPorEstacao } from "@/lib/checklist-data";
+import { downloadInspectionPdf } from "@/lib/exporters";
 import { fetchInspecoes, saveInspecao } from "@/lib/storage";
 import { cx, formatDate, isAplicavel, nowDate, nowTime, summarize } from "@/lib/utils";
 import type { ChecklistItem, Estacao, Inspecao, Resposta, StatusResposta, Turno, Usuario } from "@/types";
@@ -84,7 +85,11 @@ export function InspectionFlow({ user, onSaved }: { user: Usuario; onSaved: () =
 
   async function finalizar() {
     if (!inspecao) return;
-    await updateInspection({ ...inspecao, status: "finalizada", horario_fim: nowTime() });
+    const finalizada = { ...inspecao, status: "finalizada" as const, horario_fim: nowTime() };
+    await updateInspection(finalizada);
+    if (window.confirm("Inspeção finalizada. Deseja baixar o PDF agora?")) {
+      await downloadInspectionPdf(finalizada);
+    }
   }
 
   if (step === "estacoes") {
@@ -184,7 +189,7 @@ export function InspectionFlow({ user, onSaved }: { user: Usuario; onSaved: () =
                 <div key={item.id} className="rounded-lg border border-red-200 bg-red-50 p-3">
                   <p className="font-bold text-red-800">{item.codigo} · {item.descricao}</p>
                   <p className="text-sm text-red-700">{resposta.observacao || "Sem observação"}</p>
-                  <p className="mt-1 text-xs text-red-700">Fotos: {resposta.fotos.join(", ") || "pendente"}</p>
+                  <p className="mt-1 text-xs text-red-700">Fotos: {resposta.fotos.join(", ") || "sem foto anexada"}</p>
                 </div>
               );
             })}
@@ -192,7 +197,7 @@ export function InspectionFlow({ user, onSaved }: { user: Usuario; onSaved: () =
         </div>
         {!stats.podeFinalizar && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
-            Existem itens pendentes ou NOK sem observação{inspecao.turno !== "Operação Parcial" ? "/foto" : ""}.
+            Existem itens pendentes ou NOK sem observação.
           </div>
         )}
         <div className="grid gap-3 sm:grid-cols-2 no-print">
@@ -316,13 +321,12 @@ function ChecklistCard({
 }) {
   const resposta = inspecao.respostas[item.id] || { checklist_item_id: item.id, status: null, observacao: "", fotos: [] };
   const aplicavel = isAplicavel(item, inspecao);
-  const exigeFotoNok = inspecao.turno !== "Operação Parcial";
   const statusButtons: Array<{ value: StatusResposta; label: string; icon: React.ElementType }> = [
     { value: "OK", label: "OK", icon: Check },
     { value: "NOK", label: "NOK", icon: AlertTriangle },
     { value: "NA", label: "N/A", icon: X }
   ];
-  const missingEvidence = resposta.status === "NOK" && (!resposta.observacao.trim() || (exigeFotoNok && resposta.fotos.length === 0));
+  const missingEvidence = resposta.status === "NOK" && !resposta.observacao.trim();
 
   return (
     <article className={cx("rounded-lg bg-white p-4 shadow-panel ring-1", missingEvidence ? "ring-red-300" : "ring-slate-200", !aplicavel && "bg-slate-50")}>
@@ -368,7 +372,7 @@ function ChecklistCard({
           />
         </label>
         <div>
-          <span className="text-sm font-semibold text-slate-700">Fotos {resposta.status === "NOK" && exigeFotoNok && <strong className="text-red-600">*</strong>}</span>
+          <span className="text-sm font-semibold text-slate-700">Fotos</span>
           <label className={cx("mt-1 flex min-h-24 flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 text-center text-sm font-semibold text-slate-600", !locked && "cursor-pointer")}>
             <Camera className="mb-2 h-5 w-5 text-linha-orange" />
             Anexar fotos
@@ -379,7 +383,7 @@ function ChecklistCard({
       </div>
       {missingEvidence && (
         <p className="mt-3 text-sm font-bold text-red-700">
-          {exigeFotoNok ? "Item NOK exige observação e foto como evidência." : "Item NOK exige observação."}
+          Item NOK exige observação.
         </p>
       )}
       <p className="mt-3 text-xs text-slate-500">
