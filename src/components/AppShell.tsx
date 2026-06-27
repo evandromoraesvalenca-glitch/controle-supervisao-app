@@ -33,7 +33,7 @@ export function AppShell({
           </div>
           <div className="hidden text-right text-sm sm:block">
             <p className="font-semibold text-linha-blue">{user.nome}</p>
-            <p className="text-slate-500">RE {user.re} · {user.perfil}</p>
+            <p className="text-slate-500">RE {user.re} · {user.perfil === "las" ? "LAS" : user.perfil}</p>
           </div>
           <button onClick={onLogout} className="rounded-lg p-3 text-slate-600 hover:bg-slate-100" title="Sair">
             <LogOut className="h-5 w-5" />
