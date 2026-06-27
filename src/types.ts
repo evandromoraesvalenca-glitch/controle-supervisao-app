@@ -8,7 +8,7 @@ export type Usuario = {
   nome: string;
   email: string;
   re: string;
-  perfil: Perfil;
+  perfil: Perfil | "las";
   ativo: boolean;
 };
 

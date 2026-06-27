@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Save, UsersRound } from "lucide-react";
 import { estacoesIniciais } from "@/lib/checklist-data";
+import { calculateStaffingTotal, normalizeStaffingCount } from "@/lib/staffing";
 import { fetchLevantamentosEfetivo, saveLevantamentoEfetivo } from "@/lib/storage";
 import type { LevantamentoEfetivo, Usuario } from "@/types";
 
@@ -30,11 +31,12 @@ function nowTime() {
 
 export function StaffingScreen({ user }: { user: Usuario }) {
   const [registros, setRegistros] = React.useState<LevantamentoEfetivo[]>([]);
-  const [lideres, setLideres] = React.useState(0);
-  const [aas, setAas] = React.useState(0);
-  const [aa, setAa] = React.useState(0);
+  const [lideres, setLideres] = React.useState("");
+  const [aas, setAas] = React.useState("");
+  const [aa, setAa] = React.useState("");
   const [message, setMessage] = React.useState("");
-  const total = lideres + aas + aa;
+  const [isSaving, setIsSaving] = React.useState(false);
+  const total = calculateStaffingTotal(lideres, aas, aa);
 
   React.useEffect(() => {
     fetchLevantamentosEfetivo().then(setRegistros);
@@ -65,31 +67,45 @@ export function StaffingScreen({ user }: { user: Usuario }) {
           event.preventDefault();
           const form = new FormData(event.currentTarget);
           const supervisor = String(form.get("supervisor") || "");
+          const lideresInformados = normalizeStaffingCount(form.get("lideres"));
+          const aasInformados = normalizeStaffingCount(form.get("aas"));
+          const aaInformados = normalizeStaffingCount(form.get("aa"));
+          const totalInformado = calculateStaffingTotal(lideresInformados, aasInformados, aaInformados);
+
+          if (totalInformado === 0) {
+            setMessage("Informe pelo menos uma pessoa antes de salvar o lançamento.");
+            return;
+          }
+
           const now = new Date().toISOString();
-          const registro = {
+          const registro: LevantamentoEfetivo = {
             id: crypto.randomUUID(),
             data_referencia: String(form.get("data") || today()),
             hora_preenchimento: String(form.get("hora") || nowTime()),
             estacao: String(form.get("estacao") || ""),
             supervisor,
-            lideres,
-            aas,
-            aa,
-            efetivo_total: total,
+            lideres: lideresInformados,
+            aas: aasInformados,
+            aa: aaInformados,
+            efetivo_total: totalInformado,
             observacao: String(form.get("observacao") || ""),
             usuario_id: user.id,
             criado_em: now,
             atualizado_em: now
           };
           try {
+            setIsSaving(true);
+            setMessage("");
             await saveLevantamentoEfetivo(registro);
             await refreshRegistros();
-            setMessage("Registro salvo.");
-            setLideres(0);
-            setAas(0);
-            setAa(0);
+            setMessage(`Registro salvo. Efetivo total: ${totalInformado}.`);
+            setLideres("");
+            setAas("");
+            setAa("");
           } catch (error) {
             setMessage(`Não foi possível salvar no Supabase: ${getErrorMessage(error)}`);
+          } finally {
+            setIsSaving(false);
           }
         }}
       >
@@ -123,9 +139,9 @@ export function StaffingScreen({ user }: { user: Usuario }) {
               {supervisores.map((supervisor) => <option key={supervisor}>{supervisor}</option>)}
             </select>
           </label>
-          <NumberField label="Líderes" value={lideres} onChange={setLideres} />
-          <NumberField label="AAS" value={aas} onChange={setAas} />
-          <NumberField label="AA" value={aa} onChange={setAa} />
+          <NumberField name="lideres" label="LAS" value={lideres} onChange={setLideres} />
+          <NumberField name="aas" label="AAS" value={aas} onChange={setAas} />
+          <NumberField name="aa" label="AA" value={aa} onChange={setAa} />
           <div className="rounded-lg bg-slate-100 p-3">
             <p className="text-xs font-semibold text-slate-500">Efetivo total</p>
             <p className="text-3xl font-black text-linha-blue">{total}</p>
@@ -135,16 +151,16 @@ export function StaffingScreen({ user }: { user: Usuario }) {
           <span className="text-sm font-semibold text-slate-700">Observações</span>
           <textarea name="observacao" className="mt-1 min-h-20 w-full rounded-lg border border-slate-300 p-3 text-sm" />
         </label>
-        <button className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-linha-orange text-sm font-bold text-white">
+        <button disabled={isSaving} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-linha-orange text-sm font-bold text-white disabled:cursor-wait disabled:opacity-60">
           <Save className="h-4 w-4" />
-          Salvar
+          {isSaving ? "Salvando..." : "Salvar"}
         </button>
         {message && <p className="mt-3 rounded-lg bg-green-50 p-3 text-sm font-bold text-green-800">{message}</p>}
       </form>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <Metric label="Efetivo total" value={totalHoje} />
-        <Metric label="Líderes" value={totalLideres} />
+        <Metric label="LAS" value={totalLideres} />
         <Metric label="AAS" value={totalAas} />
         <Metric label="AA" value={totalAa} />
         <Metric label="Estações preenchidas" value={estacoesPreenchidas} />
@@ -154,11 +170,11 @@ export function StaffingScreen({ user }: { user: Usuario }) {
   );
 }
 
-function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+function NumberField({ name, label, value, onChange }: { name: string; label: string; value: string; onChange: (value: string) => void }) {
   return (
     <label className="block">
       <span className="text-sm font-semibold text-slate-700">{label}</span>
-      <input type="number" min={0} step={1} value={value} onChange={(event) => onChange(Math.max(0, Number(event.target.value || 0)))} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
+      <input name={name} inputMode="numeric" type="number" min={0} step={1} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
     </label>
   );
 }

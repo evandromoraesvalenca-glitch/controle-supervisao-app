@@ -42,6 +42,7 @@ export function LoginScreen({ onLogin }: { onLogin: (user: Usuario) => void }) {
             <span className="text-sm font-semibold text-slate-700">Perfil</span>
             <select name="perfil" className="mt-1 h-12 w-full rounded-lg border border-slate-300 px-3">
               <option value="supervisor">Supervisor</option>
+              <option value="las">LAS</option>
               <option value="cco">CCO</option>
               <option value="coordenacao-gerencia">Coordenação/Gerência</option>
             </select>

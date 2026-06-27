@@ -1,5 +1,6 @@
 ﻿import { estacoesIniciais, getChecklistItensPorEstacao } from "@/lib/checklist-data";
 import { supabase } from "@/lib/supabase";
+import { calculateStaffingTotal, normalizeStaffingCount } from "@/lib/staffing";
 import type { Ausencia, Inspecao, LevantamentoEfetivo, Resposta, Usuario } from "@/types";
 
 const USER_KEY = "linha6_usuario_demo";
@@ -279,11 +280,7 @@ export async function fetchLevantamentosEfetivo(): Promise<LevantamentoEfetivo[]
 
   if (error) throw error;
 
-  return (data || []).map((item) => ({
-    ...item,
-    observacao: item.observacao || "",
-    usuario_id: item.usuario_id || "supabase"
-  })) as LevantamentoEfetivo[];
+  return (data || []).map(normalizeLevantamentoEfetivo);
 }
 
 export async function saveLevantamentoEfetivo(registro: LevantamentoEfetivo) {
@@ -292,26 +289,27 @@ export async function saveLevantamentoEfetivo(registro: LevantamentoEfetivo) {
 
 export async function saveLevantamentoEfetivoRemoto(registro: LevantamentoEfetivo) {
   const client = requireSupabase();
+  const normalized = normalizeLevantamentoEfetivo(registro);
   const payload = {
-    data_referencia: registro.data_referencia,
-    hora_preenchimento: registro.hora_preenchimento,
-    estacao: registro.estacao,
-    supervisor: registro.supervisor,
-    lideres: registro.lideres,
-    aas: registro.aas,
-    aa: registro.aa,
-    efetivo_total: registro.efetivo_total,
-    observacao: registro.observacao,
-    usuario_id: registro.usuario_id,
+    data_referencia: normalized.data_referencia,
+    hora_preenchimento: normalized.hora_preenchimento,
+    estacao: normalized.estacao,
+    supervisor: normalized.supervisor,
+    lideres: normalized.lideres,
+    aas: normalized.aas,
+    aa: normalized.aa,
+    efetivo_total: normalized.efetivo_total,
+    observacao: normalized.observacao,
+    usuario_id: normalized.usuario_id,
     atualizado_em: new Date().toISOString()
   };
 
   const { data: existing, error: selectError } = await client
     .from("levantamentos_efetivo")
-    .select("id,criado_em")
-    .eq("data_referencia", registro.data_referencia)
-    .eq("estacao", registro.estacao)
-    .eq("supervisor", registro.supervisor)
+    .select("id")
+    .eq("data_referencia", normalized.data_referencia)
+    .eq("estacao", normalized.estacao)
+    .eq("supervisor", normalized.supervisor)
     .order("criado_em", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -320,37 +318,73 @@ export async function saveLevantamentoEfetivoRemoto(registro: LevantamentoEfetiv
 
   const request = existing?.id
     ? client.from("levantamentos_efetivo").update(payload).eq("id", existing.id)
-    : client.from("levantamentos_efetivo").insert({ ...payload, id: registro.id, criado_em: registro.criado_em });
+    : client.from("levantamentos_efetivo").insert({ ...payload, id: normalized.id, criado_em: normalized.criado_em });
 
-  const { error } = await request;
+  const { data, error } = await request
+    .select("id,data_referencia,hora_preenchimento,estacao,supervisor,lideres,aas,aa,efetivo_total,observacao,usuario_id,criado_em,atualizado_em")
+    .single();
 
   if (error) throw error;
-  return "remote" as const;
+  const saved = normalizeLevantamentoEfetivo(data);
+  assertStaffingValues(saved, normalized);
+  return saved;
 }
 
 export async function updateLevantamentoEfetivo(registro: LevantamentoEfetivo) {
   const client = requireSupabase();
-  const { error } = await client
+  const normalized = normalizeLevantamentoEfetivo(registro);
+  const { data, error } = await client
     .from("levantamentos_efetivo")
     .update({
-      data_referencia: registro.data_referencia,
-      hora_preenchimento: registro.hora_preenchimento,
-      estacao: registro.estacao,
-      supervisor: registro.supervisor,
-      lideres: registro.lideres,
-      aas: registro.aas,
-      aa: registro.aa,
-      efetivo_total: registro.efetivo_total,
-      observacao: registro.observacao,
-      usuario_id: registro.usuario_id,
+      data_referencia: normalized.data_referencia,
+      hora_preenchimento: normalized.hora_preenchimento,
+      estacao: normalized.estacao,
+      supervisor: normalized.supervisor,
+      lideres: normalized.lideres,
+      aas: normalized.aas,
+      aa: normalized.aa,
+      efetivo_total: normalized.efetivo_total,
+      observacao: normalized.observacao,
+      usuario_id: normalized.usuario_id,
       atualizado_em: new Date().toISOString()
     })
-    .eq("id", registro.id);
+    .eq("id", normalized.id)
+    .select("id,data_referencia,hora_preenchimento,estacao,supervisor,lideres,aas,aa,efetivo_total,observacao,usuario_id,criado_em,atualizado_em")
+    .single();
 
   if (error) throw error;
-  return "remote" as const;
+  const saved = normalizeLevantamentoEfetivo(data);
+  assertStaffingValues(saved, normalized);
+  return saved;
 }
 
 export async function deleteLevantamentoEfetivo(id: string) {
   return excluirRegistro("levantamentos_efetivo", id);
+}
+
+function normalizeLevantamentoEfetivo(registro: any): LevantamentoEfetivo {
+  const lideres = normalizeStaffingCount(registro.lideres);
+  const aas = normalizeStaffingCount(registro.aas);
+  const aa = normalizeStaffingCount(registro.aa);
+
+  return {
+    ...registro,
+    lideres,
+    aas,
+    aa,
+    efetivo_total: calculateStaffingTotal(lideres, aas, aa),
+    observacao: registro.observacao || "",
+    usuario_id: registro.usuario_id || "supabase"
+  } as LevantamentoEfetivo;
+}
+
+function assertStaffingValues(saved: LevantamentoEfetivo, expected: LevantamentoEfetivo) {
+  if (
+    saved.lideres !== expected.lideres ||
+    saved.aas !== expected.aas ||
+    saved.aa !== expected.aa ||
+    saved.efetivo_total !== expected.efetivo_total
+  ) {
+    throw new Error("O Supabase não confirmou os valores informados no lançamento de efetivo.");
+  }
 }

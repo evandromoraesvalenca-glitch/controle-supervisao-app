@@ -155,7 +155,7 @@ export function SavedRecordsScreen() {
                         {supervisoresEfetivo.map((supervisor) => <option key={supervisor}>{supervisor}</option>)}
                       </select>
                     </label>
-                    <EditField label="Líderes" name="lideres" type="number" defaultValue={String(registro.lideres)} />
+                    <EditField label="LAS" name="lideres" type="number" defaultValue={String(registro.lideres)} />
                     <EditField label="AAS" name="aas" type="number" defaultValue={String(registro.aas)} />
                     <EditField label="AA" name="aa" type="number" defaultValue={String(registro.aa)} />
                   </div>
@@ -178,7 +178,7 @@ export function SavedRecordsScreen() {
                 <>
                   <p className="font-bold text-linha-blue">{registro.estacao}</p>
                   <p className="text-sm text-slate-600">
-                    {new Date(`${registro.data_referencia}T00:00:00`).toLocaleDateString("pt-BR")} · {registro.hora_preenchimento} · {registro.supervisor} · Líderes {registro.lideres} · AAS {registro.aas} · AA {registro.aa} · Total {registro.efetivo_total}
+                    {new Date(`${registro.data_referencia}T00:00:00`).toLocaleDateString("pt-BR")} · {registro.hora_preenchimento} · {registro.supervisor} · LAS {registro.lideres} · AAS {registro.aas} · AA {registro.aa} · Total {registro.efetivo_total}
                   </p>
                   {registro.observacao && <p className="mt-1 text-sm text-slate-500">{registro.observacao}</p>}
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">

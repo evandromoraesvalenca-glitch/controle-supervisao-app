@@ -10,7 +10,7 @@ import { HomeMenu } from "@/components/HomeMenu";
 import { InspectionFlow } from "@/components/InspectionFlow";
 import { LoginScreen } from "@/components/LoginScreen";
 import { SavedRecordsScreen } from "@/components/SavedRecordsScreen";
-import { StaffingDashboardScreen } from "@/components/StaffingDashboardScreen";
+import { StaffingOverviewScreen } from "@/components/StaffingOverviewScreen";
 import { StaffingScreen } from "@/components/StaffingScreen";
 import { clearStoredUser, getStoredUser, setStoredUser } from "@/lib/storage";
 import type { Usuario } from "@/types";
@@ -48,7 +48,7 @@ export default function Home() {
       {active === "estacoes" && <InspectionFlow user={user} onSaved={() => setRefreshKey((key) => key + 1)} />}
       {active === "ausencia" && <AbsenceScreen user={user} />}
       {active === "efetivo" && <StaffingScreen user={user} />}
-      {active === "dashboardEfetivo" && <StaffingDashboardScreen />}
+      {active === "dashboardEfetivo" && <StaffingOverviewScreen />}
       {active === "registros" && <SavedRecordsScreen />}
       {active === "historico" && <HistoryScreen user={user} refreshKey={refreshKey} />}
       {active === "dashboard" && <DashboardScreen refreshKey={refreshKey} />}
