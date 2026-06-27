@@ -144,8 +144,12 @@
       };
       let state = { tab: "inicio", step: "estacoes", user: store.user, inspection: null, category: categories[0], filters: {} };
       const app = document.getElementById("app");
-      const today = () => new Date().toISOString().slice(0, 10);
-      const time = () => new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      const today = () => {
+        const parts = new Intl.DateTimeFormat("en-US", { timeZone:"America/Sao_Paulo", year:"numeric", month:"2-digit", day:"2-digit" }).formatToParts(new Date());
+        const value = Object.fromEntries(parts.map(part => [part.type, part.value]));
+        return `${value.year}-${value.month}-${value.day}`;
+      };
+      const time = () => new Date().toLocaleTimeString("pt-BR", { timeZone:"America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
       const staffingDateTime = (r) => new Date(`${r.data}T${String(r.hora || "00:00").slice(0,5)}:00`);
       const periodDate = (data, hora, fallback) => new Date(`${data || today()}T${hora || fallback}:00`);      const applicable = (item, ins) => ins.turno !== "Operação Parcial" || item.opa;
       const summary = (ins) => {
@@ -192,17 +196,17 @@
                 <label><span>Horário</span><input name="hora" type="time" value="${time()}" required></label>
                 <label><span>Estação</span><select name="estacao" required>${stations.map(station => `<option>${station}</option>`).join("")}</select></label>
                 <label><span>Supervisor</span><select name="supervisor" required>${supervisorOptions}</select></label>
-                <label><span>Líderes</span><input name="lideres" type="number" min="0" step="1" value="0" required></label>
-                <label><span>AAS</span><input name="aas" type="number" min="0" step="1" value="0" required></label>
-                <label><span>AA</span><input name="aa" type="number" min="0" step="1" value="0" required></label>
-                <div class="info"><small>Efetivo total</small><strong id="staffing-total">0</strong></div>
+                <label><span>LAS</span><input name="lideres" type="number" min="0" step="1" value="" required></label>
+                <label><span>AAS</span><input name="aas" type="number" min="0" step="1" value="" required></label>
+                <label><span>AA</span><input name="aa" type="number" min="0" step="1" value="" required></label>
+                <div class="info"><small>Efetivo total</small><strong id="staffing-total">—</strong></div>
               </div>
               <label><span>Observações</span><textarea name="observacao" placeholder="Opcional"></textarea></label>
               <button class="btn" type="submit">Salvar lançamento</button>
             </form>
           </section>
           <div class="grid metrics">
-            ${[["Efetivo hoje", total], ["Líderes", lideres], ["AAS", aas], ["AA", aa], ["Estações preenchidas", filled], ["Sem preenchimento", missing.length]].map(([label, value]) => `<div class="metric ${label === "Sem preenchimento" ? "danger" : ""}"><span>${label}</span><b>${value}</b></div>`).join("")}
+            ${[["Efetivo hoje", total], ["LAS", lideres], ["AAS", aas], ["AA", aa], ["Estações preenchidas", filled], ["Sem preenchimento", missing.length]].map(([label, value]) => `<div class="metric ${label === "Sem preenchimento" ? "danger" : ""}"><span>${label}</span><b>${value}</b></div>`).join("")}
           </div>`;
       }
 
@@ -253,6 +257,28 @@
         const tableView = `<section class="panel"><h3>Tabela executiva</h3><div class="stack">${executiveRows.slice(0,12).map(item => `<article class="row"><b>${item.estacao}</b><br><small>${item.data} · ${item.hora} · ${item.supervisor}</small><p>${item.categoria} · <span style="${pill(item.status)};border-radius:999px;padding:5px 9px;font-weight:800;font-size:12px">${item.status}</span></p><small>${item.observacao}</small>${item.pending ? "" : `<br><button class="btn secondary" data-delete-staffing="${item.id}" style="min-height:36px;margin-top:10px">Apagar</button>`}</article>`).join("")}</div></section>`;
         const views = { geral: generalView, estacoes: stationView, status: statusView, supervisores: supervisorView, resumo: summaryView, tabela: tableView };
         return `<section class="panel" style="border-radius:18px;box-shadow:0 12px 30px rgba(15,23,42,.06)"><div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap"><div><p class="eyebrow">Controle da Supervisão</p><h2 style="font-size:28px;margin-bottom:8px">Dashboard Gerencial da Supervisão</h2><p style="color:#64748b;font-weight:600">Escolha uma visão para consultar sem rolagem excessiva.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn blue" data-refresh-staffing style="min-height:40px">Atualizar</button><button class="btn secondary" data-clear-staffing-filters style="min-height:40px">Limpar filtros</button></div></div><div class="grid filters" style="margin-top:18px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))"><label><span>Data inicial</span><input id="staffing-start-date" type="date" value="${startDate}"></label><label><span>Hora inicial</span><input id="staffing-start-time" type="time" value="${startTime}"></label><label><span>Data final</span><input id="staffing-end-date" type="date" value="${endDate}"></label><label><span>Hora final</span><input id="staffing-end-time" type="time" value="${endTime}"></label><label><span>Estação</span><select id="staffing-station"><option>Todas</option>${stations.map(station => `<option ${stationFilter === station ? "selected" : ""}>${station}</option>`).join("")}</select></label><label><span>Supervisor</span><select id="staffing-supervisor"><option>Todos</option>${supervisors.map(supervisor => `<option ${supervisorFilter === supervisor ? "selected" : ""}>${supervisor}</option>`).join("")}</select></label><label><span>Status</span><select id="staffing-status">${["Todos","Concluído","Em andamento","Pendente","Atenção"].map(status => `<option ${statusFilter === status ? "selected" : ""}>${status}</option>`).join("")}</select></label></div></section><section class="panel"><h3>Selecionar visão</h3><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(135px,1fr))">${viewButtons}</div></section>${executiveRows.length === 0 ? `<section class="panel" style="text-align:center;padding:34px"><h3>Nenhum dado encontrado</h3><p>Ajuste o período ou limpe os filtros para ampliar a consulta.</p></section>` : views[activeView]}`;
+      }
+
+      function staffingOverviewScreen() {
+        const startDate = state.staffingStartDate || today();
+        const startTime = state.staffingStartTime || "00:00";
+        const endDate = state.staffingEndDate || today();
+        const endTime = state.staffingEndTime || "23:59";
+        const start = periodDate(startDate, startTime, "00:00");
+        const end = periodDate(endDate, endTime, "23:59");
+        const rows = store.staffing.filter(item => { const current = staffingDateTime(item); return current >= start && current <= end; });
+        const byStation = stations.map(station => {
+          const list = rows.filter(item => item.estacao === station);
+          const las = list.reduce((sum, item) => sum + Number(item.lideres || 0), 0);
+          const aas = list.reduce((sum, item) => sum + Number(item.aas || 0), 0);
+          const aa = list.reduce((sum, item) => sum + Number(item.aa || 0), 0);
+          return { station, las, aas, aa, total: las + aas + aa };
+        });
+        const totals = byStation.reduce((sum, item) => ({ las:sum.las+item.las, aas:sum.aas+item.aas, aa:sum.aa+item.aa, total:sum.total+item.total }), { las:0, aas:0, aa:0, total:0 });
+        const header = `<div style="display:grid;grid-template-columns:minmax(110px,1fr) 46px 46px 46px 56px;gap:4px;padding:12px 8px;background:#f1f5f9;text-align:center;font-size:12px;font-weight:900;color:#64748b"><span style="text-align:left">ESTAÇÃO</span><span>LAS</span><span>AAS</span><span>AA</span><span>TOTAL</span></div>`;
+        const stationRows = byStation.map(item => `<div style="display:grid;grid-template-columns:minmax(110px,1fr) 46px 46px 46px 56px;gap:4px;align-items:center;min-height:54px;padding:8px;border-top:1px solid #e2e8f0;text-align:center"><b style="text-align:left;color:#0b2344;font-size:14px">${item.station}</b><b>${item.las}</b><b>${item.aas}</b><b>${item.aa}</b><strong style="color:#0b2344;font-size:17px">${item.total}</strong></div>`).join("");
+        const totalRow = `<div style="display:grid;grid-template-columns:minmax(110px,1fr) 46px 46px 46px 56px;gap:4px;align-items:center;padding:15px 8px;background:#0b2344;color:white;text-align:center;border-top:3px solid #f58220"><b style="text-align:left">TOTAL GERAL</b><b>${totals.las}</b><b>${totals.aas}</b><b>${totals.aa}</b><strong style="color:#fdba74;font-size:19px">${totals.total}</strong></div>`;
+        return `<section class="panel"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><p class="eyebrow">Efetivo operacional</p><h2>Visualização Geral do Efetivo</h2><p style="color:#64748b;font-weight:600">Quantidade de profissionais por estação no período selecionado.</p></div><button class="btn blue" data-refresh-staffing style="min-height:40px;width:auto">Atualizar</button></div><div class="grid filters" style="margin-top:16px;grid-template-columns:repeat(2,minmax(120px,1fr))"><label><span>Data inicial</span><input id="staffing-start-date" type="date" value="${startDate}"></label><label><span>Hora inicial</span><input id="staffing-start-time" type="time" value="${startTime}"></label><label><span>Data final</span><input id="staffing-end-date" type="date" value="${endDate}"></label><label><span>Hora final</span><input id="staffing-end-time" type="time" value="${endTime}"></label></div></section><section class="panel" style="padding:0;overflow:hidden">${header}${stationRows}${totalRow}</section>`;
       }
 
       function recordsScreen() {
@@ -468,15 +494,18 @@
         if (state.tab === "estacoes") content = state.step === "inicio" ? startScreen() : state.step === "checklist" ? checklistScreen() : state.step === "resumo" ? resumeScreen() : stationScreen();
         if (state.tab === "ausencia") content = absenceScreen();
         if (state.tab === "efetivo") content = staffingScreen();
-        if (state.tab === "dashboardEfetivo") content = staffingDashboardScreen();
+        if (state.tab === "dashboardEfetivo") content = staffingOverviewScreen();
         if (state.tab === "registros") content = recordsScreen();
         if (state.tab === "historico") content = historyScreen();
         if (state.tab === "dashboard") content = dashboardScreen();
         if (state.tab === "admin") content = adminScreen();
+        content = content.replaceAll("Líderes", "LAS");
         app.innerHTML = shell(content);
         bind();
       }
       function bind() {
+        const profileSelect = document.querySelector('#login select[name="perfil"]');
+        if (profileSelect && !profileSelect.querySelector('option[value="las"]')) profileSelect.insertBefore(new Option("LAS", "las"), profileSelect.children[1] || null);
         document.querySelector("#login")?.addEventListener("submit", e => { e.preventDefault(); const f=new FormData(e.target); state.user={ id: crypto.randomUUID(), nome:f.get("nome"), re:f.get("re"), perfil:f.get("perfil") }; store.user=state.user; render(); });
         document.querySelectorAll("[data-menu]").forEach(b => b.onclick = () => set({ tab: b.dataset.menu, step: "estacoes" }));
         document.querySelectorAll("[data-record-filter]").forEach(button => button.addEventListener("click", () => set({ recordsFilter: button.dataset.recordFilter })));
@@ -532,6 +561,7 @@
             const lideres = Math.max(0, Number(f.get("lideres") || 0));
             const aas = Math.max(0, Number(f.get("aas") || 0));
             const aa = Math.max(0, Number(f.get("aa") || 0));
+            if (lideres + aas + aa === 0) { alert("Informe pelo menos uma pessoa antes de salvar o lançamento."); return; }
             const registro = { id: crypto.randomUUID(), data: f.get("data"), hora: f.get("hora") || time(), estacao: f.get("estacao"), supervisor, lideres, aas, aa, total: lideres + aas + aa, observacao: f.get("observacao") || "", usuario: state.user.nome, atualizado_em: new Date().toISOString() };
             const all = store.staffing;
             all.unshift(registro);

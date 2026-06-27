@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { estacoesIniciais } from "@/lib/checklist-data";
 import { deleteLevantamentoEfetivo, fetchLevantamentosEfetivo } from "@/lib/storage";
+import { nowDate } from "@/lib/utils";
 import type { LevantamentoEfetivo } from "@/types";
 
 type StatusGerencial = "Concluído" | "Em andamento" | "Pendente" | "Atenção";
@@ -37,7 +38,7 @@ type ExecutiveRow = {
 const statusOptions: Array<StatusGerencial | "Todos"> = ["Todos", "Concluído", "Em andamento", "Pendente", "Atenção"];
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return nowDate();
 }
 
 function formatDate(value: string) {

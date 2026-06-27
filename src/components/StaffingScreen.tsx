@@ -5,6 +5,7 @@ import { Save, UsersRound } from "lucide-react";
 import { estacoesIniciais } from "@/lib/checklist-data";
 import { calculateStaffingTotal, normalizeStaffingCount } from "@/lib/staffing";
 import { fetchLevantamentosEfetivo, saveLevantamentoEfetivo } from "@/lib/storage";
+import { nowDate } from "@/lib/utils";
 import type { LevantamentoEfetivo, Usuario } from "@/types";
 
 const supervisores = ["Evandro", "Lucas", "Ana", "Audrey", "Dackson", "Junior", "Marta", "A definir"];
@@ -21,12 +22,8 @@ function getErrorMessage(error: unknown) {
   return String(error || "Erro desconhecido");
 }
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function nowTime() {
-  return new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
 }
 
 export function StaffingScreen({ user }: { user: Usuario }) {
@@ -42,7 +39,7 @@ export function StaffingScreen({ user }: { user: Usuario }) {
     fetchLevantamentosEfetivo().then(setRegistros);
   }, []);
 
-  const registrosHoje = registros.filter((item) => item.data_referencia === today());
+  const registrosHoje = registros.filter((item) => item.data_referencia === nowDate());
   const totalHoje = registrosHoje.reduce((sum, item) => sum + item.efetivo_total, 0);
   const totalLideres = registrosHoje.reduce((sum, item) => sum + item.lideres, 0);
   const totalAas = registrosHoje.reduce((sum, item) => sum + item.aas, 0);
@@ -80,7 +77,7 @@ export function StaffingScreen({ user }: { user: Usuario }) {
           const now = new Date().toISOString();
           const registro: LevantamentoEfetivo = {
             id: crypto.randomUUID(),
-            data_referencia: String(form.get("data") || today()),
+            data_referencia: String(form.get("data") || nowDate()),
             hora_preenchimento: String(form.get("hora") || nowTime()),
             estacao: String(form.get("estacao") || ""),
             supervisor,
@@ -121,7 +118,7 @@ export function StaffingScreen({ user }: { user: Usuario }) {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="block">
             <span className="text-sm font-semibold text-slate-700">Data</span>
-            <input name="data" type="date" defaultValue={today()} required className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
+            <input name="data" type="date" defaultValue={nowDate()} required className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm" />
           </label>
           <label className="block">
             <span className="text-sm font-semibold text-slate-700">Horário</span>

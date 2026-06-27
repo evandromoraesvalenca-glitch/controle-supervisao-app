@@ -4,11 +4,8 @@ import * as React from "react";
 import { RefreshCw, UsersRound } from "lucide-react";
 import { estacoesIniciais } from "@/lib/checklist-data";
 import { fetchLevantamentosEfetivo } from "@/lib/storage";
+import { nowDate } from "@/lib/utils";
 import type { LevantamentoEfetivo } from "@/types";
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function toDateTime(registro: LevantamentoEfetivo) {
   const hora = String(registro.hora_preenchimento || "00:00").slice(0, 5);
@@ -17,9 +14,9 @@ function toDateTime(registro: LevantamentoEfetivo) {
 
 export function StaffingOverviewScreen() {
   const [registros, setRegistros] = React.useState<LevantamentoEfetivo[]>([]);
-  const [inicioData, setInicioData] = React.useState(today());
+  const [inicioData, setInicioData] = React.useState(nowDate());
   const [inicioHora, setInicioHora] = React.useState("00:00");
-  const [fimData, setFimData] = React.useState(today());
+  const [fimData, setFimData] = React.useState(nowDate());
   const [fimHora, setFimHora] = React.useState("23:59");
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState("");

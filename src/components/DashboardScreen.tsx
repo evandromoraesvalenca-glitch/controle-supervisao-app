@@ -3,7 +3,7 @@
 import * as React from "react";
 import { checklistItensIniciais, categorias, estacoesIniciais } from "@/lib/checklist-data";
 import { fetchInspecoes } from "@/lib/storage";
-import { summarize } from "@/lib/utils";
+import { nowDate, summarize } from "@/lib/utils";
 import type { Inspecao } from "@/types";
 
 export function DashboardScreen({ refreshKey }: { refreshKey: number }) {
@@ -17,7 +17,7 @@ export function DashboardScreen({ refreshKey }: { refreshKey: number }) {
   const nok = inspecoes.reduce((sum, inspecao) => sum + summarize(inspecao, checklistItensIniciais).nok, 0);
   const na = inspecoes.reduce((sum, inspecao) => sum + summarize(inspecao, checklistItensIniciais).na, 0);
   const pendentes = inspecoes.filter((inspecao) => inspecao.status !== "finalizada").length;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = nowDate();
 
   const nokPorEstacao = estacoesIniciais.map((station) => ({
     label: station.nome,
